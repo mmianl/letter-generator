@@ -1,37 +1,49 @@
-\documentclass[german]{letter}
-\usepackage[english,ngerman]{babel}
-\usepackage[utf8]{inputenc}
+\documentclass[
+	fontsize=12pt,
+	paper=A4,
+	parskip=half-,
+	fromalign=right,
+	fromphone=false,
+	fromemail=false,
+	version=last,
+	foldmarks=off,
+	subject=beforeopening,
+	subject=centered
+]{scrlttr2}
+
+\usepackage{lmodern}
+\renewcommand*\familydefault{\sfdefault}
 \usepackage[T1]{fontenc}
+
+\usepackage[utf8]{inputenc}
+\usepackage{eurosym}
+\DeclareUnicodeCharacter{20AC}{\euro}
+\usepackage[ngerman]{babel}
+\usepackage{pdfpages}
+\usepackage[hidelinks]{hyperref}
+\setkomavar{signature}{}
 \usepackage{csquotes}
 \usepackage{microtype}
 
-\usepackage{geometry}
-
-\geometry{
-	left=4cm,
-	right=4cm,
-	top=4cm,
-	bottom=4cm}
-\address{ {{ .Recipient }} \\{{ .RecipientStreet }} \\{{ .RecipientPostalCode }} {{ .RecipientCity }}  }
-
 \begin{document}
-	\begin{letter}{ {{ .Sender }}\\ {{ .SenderStreet }}\\ {{ .SenderPostalCode }} {{ .SenderCity }} }
-		\microtypesetup{activate=true}
 
-		\date{ {{ .SenderCity }}, am {{ .Date }} }
-		\opening{ {{ .Opening }} }
+\setkomavar{fromname}{ {{ .Sender }} }
+\setkomavar{fromaddress}{ {{ .SenderStreet }}\\{{ .SenderPostalCode }} {{ .SenderCity }} }
+\setkomavar{date}{ {{ .Date }} }
+\setkomavar{subject}{ {{ .Subject }} }
 
-		{{ .Content }}
+\begin{letter}{ {{ .Recipient }}\\{{ .RecipientStreet }}\\{{ .RecipientPostalCode }} {{ .RecipientCity }} }
 
-		\vspace{20pt}
+\opening{ {{ .Opening }} }
 
-		{{ .Closing }}
+{{ .Content }}
 
-		{{if .SignatureSpace}}
-        \vspace{30pt}
-        {{end}}
+\vspace{10pt}
+{{ .Closing }}
+{{if .SignatureSpace}}
+\vspace{30pt}
+{{end}}
+{{ .Sender }}
 
-		{{ .Sender }}
-
-	\end{letter}
+\end{letter}
 \end{document}
