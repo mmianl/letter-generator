@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <title>Letter Generator</title>
+</head>
+
+<body>
+  <nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+      <h1 class="is-size-2 pl-4">Basement Technology</h1>
+
+      <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
+  </nav>
+  <section class="hero is-danger mt-3">
+    <div class="hero-body">
+      <p class="title">
+        Fehler :-(
+      </p>
+      <p class="subtitle">
+        Ein Fehler ist aufgetreten. <br/> {{ .Error }}
+      </p>
+    </div>
+  </section>
+  <div class="container is-fluid mt-3">
+    <p><a href="../">Zurück...</p>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,37 @@
+\documentclass[german]{letter}
+\usepackage[english,ngerman]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{csquotes}
+\usepackage{microtype}
+
+\usepackage{geometry}
+
+\geometry{
+	left=4cm,
+	right=4cm,
+	top=4cm,
+	bottom=4cm}
+\address{ {{ .Recipient }} \\{{ .RecipientStreet }} \\{{ .RecipientPostalCode }} {{ .RecipientCity }}  }
+
+\begin{document}
+	\begin{letter}{ {{ .Sender }}\\ {{ .SenderStreet }}\\ {{ .SenderPostalCode }} {{ .SenderCity }} }
+		\microtypesetup{activate=true}
+
+		\date{ {{ .SenderCity }}, am {{ .Date }} }
+		\opening{ {{ .Opening }} }
+
+		{{ .Content }}
+
+		\vspace{20pt}
+
+		{{ .Closing }}
+
+		{{if .SignatureSpace}}
+        \vspace{30pt}
+        {{end}}
+
+		{{ .Sender }}
+
+	\end{letter}
+\end{document}

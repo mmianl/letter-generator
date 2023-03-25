@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <title>Letter Generator</title>
+</head>
+
+<body>
+  <nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+      <h1 class="is-size-2 pl-4">Basement Technology</h1>
+
+      <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
+  </nav>
+  <section class="hero is-success mt-3">
+    <div class="hero-body">
+      <p class="title">
+        Letter Generator
+      </p>
+      <p class="subtitle">
+        Geben Sie Ihre Daten ein und generieren Sie sich einen Brief im PDF Format.
+      </p>
+    </div>
+  </section>
+
+  <div class="container is-fluid mt-3">
+    <form action="/generate" method="post">
+      <div class="field">
+        <label class="label">Absender Name</label>
+        <div class="control">
+          <input name="sender" class="input" type="text" placeholder="Max Mustermann">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Absender Adresse</label>
+        <div class="control">
+          <input name="sender_street" class="input" type="text" placeholder="Rotentumstraße 109">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Absender Stadt</label>
+        <div class="control">
+          <input name="sender_city" class="input" type="text" placeholder="Wien">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Absender Postleitzahl</label>
+        <div class="control">
+          <input name="sender_postal_code" class="input" type="text" placeholder="1010">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Empfänger Name</label>
+        <div class="control">
+          <input name="recipient" class="input" type="text" placeholder="Max Mustermann">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Empfänger Adresse</label>
+        <div class="control">
+          <input name="recipient_street" class="input" type="text" placeholder="Rotentumstraße 109">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Empfänger Stadt</label>
+        <div class="control">
+          <input name="recipient_city" class="input" type="text" placeholder="Wien">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Empfänger Postleitzahl</label>
+        <div class="control">
+          <input name="recipient_postal_code" class="input" type="text" placeholder="1010">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Datum</label>
+        <div class="control">
+          <input name="date" class="input" type="date" name="dateofbirth" id="dateofbirth">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Anrede</label>
+        <div class="control">
+          <input name="opening" class="input" type="text" placeholder="Sehr geehrte Damen und Herren,">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Inhalt</label>
+        <div class="control">
+          <textarea name="content" class="textarea"></textarea>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Grußformel
+        </label>
+        <div class="control">
+          <input name="closing" class="input" type="text" placeholder="Beste Grüße,">
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="control">
+          <label class="checkbox">
+            <input name="signature_space" type="checkbox">
+            Abstand zwischen Name und Grußformel für Untrschrift
+          </label>
+        </div>
+      </div>
+
+      <div class="field is-grouped">
+        <div class="control mt-3">
+          <button class="button is-link">Brief als PDF generieren</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <footer class="footer mt-6">
+    <div class="content has-text-centered">
+      <p>
+        <strong>Letter Generator</strong> The source code is licensed
+        <a href="http://opensource.org/licenses/mit-license.php">MIT</a> and available at <a
+          href="https://github.com/mmianl/letter-generator">Github</a>.
+      </p>
+    </div>
+  </footer>
+</body>
+
+</html>
