@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -12,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aquilax/truncate"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -22,27 +22,27 @@ import (
 var (
 	apiRequestsInFlightGauge = promauto.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "letter_generator_api_http_requests_in_flight",
+			Name: "letter_generator_http_requests_in_flight",
 			Help: "Number of concurrent HTTP api requests currently handled.",
 		},
 	)
 	apiRequestsTotalCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "letter_generator_api_http_requests_total",
+			Name: "letter_generator_http_requests_total",
 			Help: "Total number of api requests.",
 		},
 		[]string{"code", "method"},
 	)
 	apiResponseSizeSummary = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: "letter_generator_api_http_response_size_bytes",
+			Name: "letter_generator_http_response_size_bytes",
 			Help: "Api HTTP response size in bytes.",
 		},
 		[]string{},
 	)
 	apiRequestsDurationSummary = promauto.NewSummaryVec(
 		prometheus.SummaryOpts{
-			Name: "letter_generator_api_http_request_duration_seconds",
+			Name: "letter_generator_http_request_duration_seconds",
 			Help: "Duration of api requests in seconds.",
 		},
 		[]string{"handler", "method"},
@@ -71,6 +71,7 @@ var (
 )
 
 type LetterContent struct {
+    Subject             string
 	Recipient           string
 	RecipientStreet     string
 	RecipientPostalCode string
@@ -91,77 +92,28 @@ type LetterError struct {
 }
 
 func (l *LetterContent) Sanitize() {
-	l.Recipient = strings.ReplaceAll(l.Recipient, "%", "")
-	l.Recipient = strings.ReplaceAll(l.Recipient, "&", "")
-	l.Recipient = strings.ReplaceAll(l.Recipient, "{", "")
-	l.Recipient = strings.ReplaceAll(l.Recipient, "}", "")
-	l.Recipient = strings.ReplaceAll(l.Recipient, "\\", "")
+    replacer := strings.NewReplacer("%", " ",
+                                    "&", " ",
+                                    "{", " ",
+                                    "}", " ",
+                                    "\\", " ",
+                                    "<", " ",
+                                    ">", " ",
+                                    "_", " ")
 
-	l.RecipientStreet = strings.ReplaceAll(l.RecipientStreet, "%", "")
-	l.RecipientStreet = strings.ReplaceAll(l.RecipientStreet, "&", "")
-	l.RecipientStreet = strings.ReplaceAll(l.RecipientStreet, "{", "")
-	l.RecipientStreet = strings.ReplaceAll(l.RecipientStreet, "}", "")
-	l.RecipientStreet = strings.ReplaceAll(l.RecipientStreet, "\\", "")
-
-	l.RecipientPostalCode = strings.ReplaceAll(l.RecipientPostalCode, "%", "")
-	l.RecipientPostalCode = strings.ReplaceAll(l.RecipientPostalCode, "&", "")
-	l.RecipientPostalCode = strings.ReplaceAll(l.RecipientPostalCode, "{", "")
-	l.RecipientPostalCode = strings.ReplaceAll(l.RecipientPostalCode, "}", "")
-	l.RecipientPostalCode = strings.ReplaceAll(l.RecipientPostalCode, "\\", "")
-
-	l.RecipientCity = strings.ReplaceAll(l.RecipientCity, "%", "")
-	l.RecipientCity = strings.ReplaceAll(l.RecipientCity, "&", "")
-	l.RecipientCity = strings.ReplaceAll(l.RecipientCity, "{", "")
-	l.RecipientCity = strings.ReplaceAll(l.RecipientCity, "}", "")
-	l.RecipientCity = strings.ReplaceAll(l.RecipientCity, "\\", "")
-
-	l.Sender = strings.ReplaceAll(l.Sender, "%", "")
-	l.Sender = strings.ReplaceAll(l.Sender, "&", "")
-	l.Sender = strings.ReplaceAll(l.Sender, "{", "")
-	l.Sender = strings.ReplaceAll(l.Sender, "}", "")
-	l.Sender = strings.ReplaceAll(l.Sender, "\\", "")
-
-	l.SenderStreet = strings.ReplaceAll(l.SenderStreet, "%", "")
-	l.SenderStreet = strings.ReplaceAll(l.SenderStreet, "&", "")
-	l.SenderStreet = strings.ReplaceAll(l.SenderStreet, "{", "")
-	l.SenderStreet = strings.ReplaceAll(l.SenderStreet, "}", "")
-	l.SenderStreet = strings.ReplaceAll(l.SenderStreet, "\\", "")
-
-	l.SenderPostalCode = strings.ReplaceAll(l.SenderPostalCode, "%", "")
-	l.SenderPostalCode = strings.ReplaceAll(l.SenderPostalCode, "&", "")
-	l.SenderPostalCode = strings.ReplaceAll(l.SenderPostalCode, "{", "")
-	l.SenderPostalCode = strings.ReplaceAll(l.SenderPostalCode, "}", "")
-	l.SenderPostalCode = strings.ReplaceAll(l.SenderPostalCode, "\\", "")
-
-	l.SenderCity = strings.ReplaceAll(l.SenderCity, "%", "")
-	l.SenderCity = strings.ReplaceAll(l.SenderCity, "&", "")
-	l.SenderCity = strings.ReplaceAll(l.SenderCity, "{", "")
-	l.SenderCity = strings.ReplaceAll(l.SenderCity, "}", "")
-	l.SenderCity = strings.ReplaceAll(l.SenderCity, "\\", "")
-
-	l.Date = strings.ReplaceAll(l.Date, "%", "")
-	l.Date = strings.ReplaceAll(l.Date, "&", "")
-	l.Date = strings.ReplaceAll(l.Date, "{", "")
-	l.Date = strings.ReplaceAll(l.Date, "}", "")
-	l.Date = strings.ReplaceAll(l.Date, "\\", "")
-
-	l.Opening = strings.ReplaceAll(l.Opening, "%", "")
-	l.Opening = strings.ReplaceAll(l.Opening, "&", "")
-	l.Opening = strings.ReplaceAll(l.Opening, "{", "")
-	l.Opening = strings.ReplaceAll(l.Opening, "}", "")
-	l.Opening = strings.ReplaceAll(l.Opening, "\\", "")
-
-	l.Closing = strings.ReplaceAll(l.Closing, "%", "")
-	l.Closing = strings.ReplaceAll(l.Closing, "&", "")
-	l.Closing = strings.ReplaceAll(l.Closing, "{", "")
-	l.Closing = strings.ReplaceAll(l.Closing, "}", "")
-	l.Closing = strings.ReplaceAll(l.Closing, "\\", "")
-
-	l.Content = strings.ReplaceAll(l.Content, "%", "")
-	l.Content = strings.ReplaceAll(l.Content, "&", "")
-	l.Content = strings.ReplaceAll(l.Content, "{", "")
-	l.Content = strings.ReplaceAll(l.Content, "}", "")
-	l.Content = strings.ReplaceAll(l.Content, "\\", "")
+    l.Recipient = truncate.Truncate(replacer.Replace(l.Recipient), 200, "...", truncate.PositionEnd)
+    l.RecipientStreet = truncate.Truncate(replacer.Replace(l.RecipientStreet), 200, "...", truncate.PositionEnd)
+    l.RecipientPostalCode = truncate.Truncate(replacer.Replace(l.RecipientPostalCode), 200, "...", truncate.PositionEnd)
+    l.RecipientCity = truncate.Truncate(replacer.Replace(l.RecipientCity), 200, "...", truncate.PositionEnd)
+    l.Sender = truncate.Truncate(replacer.Replace(l.Sender), 200, "...", truncate.PositionEnd)
+    l.SenderStreet = truncate.Truncate(replacer.Replace(l.SenderStreet), 200, "...", truncate.PositionEnd)
+    l.SenderPostalCode = truncate.Truncate(replacer.Replace(l.SenderPostalCode), 200, "...", truncate.PositionEnd)
+    l.SenderCity = truncate.Truncate(replacer.Replace(l.SenderCity), 200, "...", truncate.PositionEnd)
+    l.Date = truncate.Truncate(replacer.Replace(l.Date), 200, "...", truncate.PositionEnd)
+    l.Opening = truncate.Truncate(replacer.Replace(l.Opening), 200, "...", truncate.PositionEnd)
+    l.Opening = truncate.Truncate(replacer.Replace(l.Opening), 200, "...", truncate.PositionEnd)
+    l.Closing = truncate.Truncate(replacer.Replace(l.Closing), 200, "...", truncate.PositionEnd)
+    l.Content = truncate.Truncate(replacer.Replace(l.Content), 10000, "...", truncate.PositionEnd)
 }
 
 func pdfLatex(l *LetterContent) ([]byte, error) {
@@ -213,7 +165,7 @@ func pdfLatex(l *LetterContent) ([]byte, error) {
 
 	log.Info().Msgf("Successfully rendered pdf file at %s/%s.pdf", dirName, baseFileName)
 
-	fileBytes, err := ioutil.ReadFile(fmt.Sprintf("%s/%s.pdf", dirName, baseFileName))
+	fileBytes, err := os.ReadFile(fmt.Sprintf("%s/%s.pdf", dirName, baseFileName))
 	if err != nil {
 		log.Error().Msg(err.Error())
 		return nil, err
@@ -228,7 +180,7 @@ var months = [...]string{
 }
 
 func GermanDate(t time.Time) string {
-	return fmt.Sprintf("%d %s %d", t.Day(), months[t.Month()-1], t.Year())
+	return fmt.Sprintf("%d. %s %d", t.Day(), months[t.Month()-1], t.Year())
 }
 
 func ReturnError(error string, w http.ResponseWriter) {
@@ -262,6 +214,7 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+    subject := r.PostFormValue("subject")
 	recipient := r.PostFormValue("recipient")
 	recipientStreet := r.PostFormValue("recipient_street")
 	recipientPostalCode := r.PostFormValue("recipient_postal_code")
@@ -289,6 +242,7 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	}
 
 	l := LetterContent{
+        Subject:             subject,
 		Recipient:           recipient,
 		RecipientStreet:     recipientStreet,
 		RecipientPostalCode: recipientPostalCode,
@@ -328,17 +282,17 @@ func main() {
 		),
 	)
 	generateChain := promhttp.InstrumentHandlerInFlight(apiRequestsInFlightGauge,
-		promhttp.InstrumentHandlerDuration(apiRequestsDurationSummary.MustCurryWith(prometheus.Labels{"handler": "/"}),
+		promhttp.InstrumentHandlerDuration(apiRequestsDurationSummary.MustCurryWith(prometheus.Labels{"handler": "/generate"}),
 			promhttp.InstrumentHandlerCounter(apiRequestsTotalCounter,
 				promhttp.InstrumentHandlerResponseSize(apiResponseSizeSummary, formHandler),
 			),
 		),
 	)
 
-	apiVersionGauge.WithLabelValues("0.0.2", runtime.Version()).Set(1)
+	apiVersionGauge.WithLabelValues("0.0.4", runtime.Version()).Set(1)
 
 	http.Handle("/", rootChain)
-	http.HandleFunc("/generate", generateChain.ServeHTTP)
+	http.Handle("/generate", generateChain)
 
 	go http.ListenAndServe(":8081", promhttp.Handler())
 
