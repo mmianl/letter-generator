@@ -8,11 +8,66 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
+)
+
+var (
+	apiRequestsInFlightGauge = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "letter_generator_api_http_requests_in_flight",
+			Help: "Number of concurrent HTTP api requests currently handled.",
+		},
+	)
+	apiRequestsTotalCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "letter_generator_api_http_requests_total",
+			Help: "Total number of api requests.",
+		},
+		[]string{"code", "method"},
+	)
+	apiResponseSizeSummary = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "letter_generator_api_http_response_size_bytes",
+			Help: "Api HTTP response size in bytes.",
+		},
+		[]string{},
+	)
+	apiRequestsDurationSummary = promauto.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Name: "letter_generator_api_http_request_duration_seconds",
+			Help: "Duration of api requests in seconds.",
+		},
+		[]string{"handler", "method"},
+	)
+	apiVersionGauge = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "letter_generator_build_info",
+			Help: "Metric with a constant '1' value labeled by version and goversion from which letter_generator was built.",
+		},
+		[]string{"version", "goversion"},
+	)
+	apiLettersGeneratedCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "letter_generator_generated_total",
+			Help: "Total number of generated letters.",
+		},
+		[]string{},
+	)
+	apiLettersGeneratedFailedCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "letter_generator_failed_total",
+			Help: "Total number of failed letters.",
+		},
+		[]string{},
+	)
 )
 
 type LetterContent struct {
@@ -144,13 +199,11 @@ func pdfLatex(l *LetterContent) ([]byte, error) {
 
 	cmnd := exec.Command("pdflatex",
 		fmt.Sprintf("-output-directory=./%s", dirName),
-		// fmt.Sprintf("-aux-directory=%s", dirName),
 		"-synctex=1", "-no-shell-escape", "-interaction=nonstopmode",
 		fmt.Sprintf("./%s/%s", dirName, baseFileName))
 
-    var errb bytes.Buffer
-    // cmnd.Stdout = &outb
-    cmnd.Stderr = &errb
+	var errb bytes.Buffer
+	cmnd.Stderr = &errb
 
 	err = cmnd.Run()
 	if err != nil {
@@ -179,6 +232,8 @@ func GermanDate(t time.Time) string {
 }
 
 func ReturnError(error string, w http.ResponseWriter) {
+	apiLettersGeneratedFailedCounter.WithLabelValues().Inc()
+
 	t, err := template.ParseFiles("templates/error.html.tmpl")
 	if err != nil {
 		log.Error().Msg(err.Error())
@@ -196,7 +251,9 @@ func ReturnError(error string, w http.ResponseWriter) {
 	}
 }
 
-func handleForm(w http.ResponseWriter, r *http.Request) {
+var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiLettersGeneratedCounter.WithLabelValues().Inc()
+
 	err := r.ParseForm()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -258,12 +315,32 @@ func handleForm(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Write(fileBytes)
-}
+})
 
 func main() {
 	fs := http.FileServer(http.Dir("./web"))
-	http.Handle("/", fs)
-	http.HandleFunc("/generate", handleForm)
+
+	rootChain := promhttp.InstrumentHandlerInFlight(apiRequestsInFlightGauge,
+		promhttp.InstrumentHandlerDuration(apiRequestsDurationSummary.MustCurryWith(prometheus.Labels{"handler": "/"}),
+			promhttp.InstrumentHandlerCounter(apiRequestsTotalCounter,
+				promhttp.InstrumentHandlerResponseSize(apiResponseSizeSummary, fs),
+			),
+		),
+	)
+	generateChain := promhttp.InstrumentHandlerInFlight(apiRequestsInFlightGauge,
+		promhttp.InstrumentHandlerDuration(apiRequestsDurationSummary.MustCurryWith(prometheus.Labels{"handler": "/"}),
+			promhttp.InstrumentHandlerCounter(apiRequestsTotalCounter,
+				promhttp.InstrumentHandlerResponseSize(apiResponseSizeSummary, formHandler),
+			),
+		),
+	)
+
+	apiVersionGauge.WithLabelValues("0.0.2", runtime.Version()).Set(1)
+
+	http.Handle("/", rootChain)
+	http.HandleFunc("/generate", generateChain.ServeHTTP)
+
+	go http.ListenAndServe(":8081", promhttp.Handler())
 
 	log.Info().Msgf("Listening on :8080...")
 	err := http.ListenAndServe(":8080", nil)
