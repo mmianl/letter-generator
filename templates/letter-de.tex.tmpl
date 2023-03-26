@@ -8,7 +8,8 @@
 	version=last,
 	foldmarks=off,
 	subject=beforeopening,
-	subject=centered
+	subject=centered,
+	foldmarks=true
 ]{scrlttr2}
 
 \usepackage{lmodern}
@@ -26,6 +27,11 @@
 \usepackage{microtype}
 
 \begin{document}
+
+\renewcommand*\pagemark{%
+  \usekomafont{pagenumber}{\thepage~/~\letterlastpage}
+}
+\setkomavar{firstfoot}{\centering\pagemark}
 
 \setkomavar{fromname}{ {{ .Sender }} }
 \setkomavar{fromaddress}{ {{ .SenderStreet }}\\{{ .SenderPostalCode }} {{ .SenderCity }} }
