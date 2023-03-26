@@ -5,3 +5,6 @@ Simple website that generates a letter from provided input. Docker image is avai
 docker build . -t mmianl/letter-generator:0.0.5
 docker run -p 8080:8080 mmianl/letter-generator:0.0.5
 ```
+
+## Document Screenshot
+![screenshot](docs/document.jpg)
