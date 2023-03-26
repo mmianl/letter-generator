@@ -71,7 +71,7 @@ var (
 )
 
 type LetterContent struct {
-    Subject             string
+	Subject             string
 	Recipient           string
 	RecipientStreet     string
 	RecipientPostalCode string
@@ -92,28 +92,28 @@ type LetterError struct {
 }
 
 func (l *LetterContent) Sanitize() {
-    replacer := strings.NewReplacer("%", " ",
-                                    "&", " ",
-                                    "{", " ",
-                                    "}", " ",
-                                    "\\", " ",
-                                    "<", " ",
-                                    ">", " ",
-                                    "_", " ")
+	replacer := strings.NewReplacer("%", " ",
+		"&", " ",
+		"{", " ",
+		"}", " ",
+		"\\", " ",
+		"<", " ",
+		">", " ",
+		"_", " ")
 
-    l.Recipient = truncate.Truncate(replacer.Replace(l.Recipient), 200, "...", truncate.PositionEnd)
-    l.RecipientStreet = truncate.Truncate(replacer.Replace(l.RecipientStreet), 200, "...", truncate.PositionEnd)
-    l.RecipientPostalCode = truncate.Truncate(replacer.Replace(l.RecipientPostalCode), 200, "...", truncate.PositionEnd)
-    l.RecipientCity = truncate.Truncate(replacer.Replace(l.RecipientCity), 200, "...", truncate.PositionEnd)
-    l.Sender = truncate.Truncate(replacer.Replace(l.Sender), 200, "...", truncate.PositionEnd)
-    l.SenderStreet = truncate.Truncate(replacer.Replace(l.SenderStreet), 200, "...", truncate.PositionEnd)
-    l.SenderPostalCode = truncate.Truncate(replacer.Replace(l.SenderPostalCode), 200, "...", truncate.PositionEnd)
-    l.SenderCity = truncate.Truncate(replacer.Replace(l.SenderCity), 200, "...", truncate.PositionEnd)
-    l.Date = truncate.Truncate(replacer.Replace(l.Date), 200, "...", truncate.PositionEnd)
-    l.Opening = truncate.Truncate(replacer.Replace(l.Opening), 200, "...", truncate.PositionEnd)
-    l.Opening = truncate.Truncate(replacer.Replace(l.Opening), 200, "...", truncate.PositionEnd)
-    l.Closing = truncate.Truncate(replacer.Replace(l.Closing), 200, "...", truncate.PositionEnd)
-    l.Content = truncate.Truncate(replacer.Replace(l.Content), 10000, "...", truncate.PositionEnd)
+	l.Recipient = truncate.Truncate(replacer.Replace(l.Recipient), 200, "...", truncate.PositionEnd)
+	l.RecipientStreet = truncate.Truncate(replacer.Replace(l.RecipientStreet), 200, "...", truncate.PositionEnd)
+	l.RecipientPostalCode = truncate.Truncate(replacer.Replace(l.RecipientPostalCode), 200, "...", truncate.PositionEnd)
+	l.RecipientCity = truncate.Truncate(replacer.Replace(l.RecipientCity), 200, "...", truncate.PositionEnd)
+	l.Sender = truncate.Truncate(replacer.Replace(l.Sender), 200, "...", truncate.PositionEnd)
+	l.SenderStreet = truncate.Truncate(replacer.Replace(l.SenderStreet), 200, "...", truncate.PositionEnd)
+	l.SenderPostalCode = truncate.Truncate(replacer.Replace(l.SenderPostalCode), 200, "...", truncate.PositionEnd)
+	l.SenderCity = truncate.Truncate(replacer.Replace(l.SenderCity), 200, "...", truncate.PositionEnd)
+	l.Date = truncate.Truncate(replacer.Replace(l.Date), 200, "...", truncate.PositionEnd)
+	l.Opening = truncate.Truncate(replacer.Replace(l.Opening), 200, "...", truncate.PositionEnd)
+	l.Opening = truncate.Truncate(replacer.Replace(l.Opening), 200, "...", truncate.PositionEnd)
+	l.Closing = truncate.Truncate(replacer.Replace(l.Closing), 200, "...", truncate.PositionEnd)
+	l.Content = truncate.Truncate(replacer.Replace(l.Content), 10000, "...", truncate.PositionEnd)
 }
 
 func pdfLatex(l *LetterContent) ([]byte, error) {
@@ -149,18 +149,22 @@ func pdfLatex(l *LetterContent) ([]byte, error) {
 
 	log.Info().Msgf("Successfully rendered tex file at ./%s/%s", dirName, fileName)
 
-	cmnd := exec.Command("pdflatex",
-		fmt.Sprintf("-output-directory=./%s", dirName),
-		"-synctex=1", "-no-shell-escape", "-interaction=nonstopmode",
-		fmt.Sprintf("./%s/%s", dirName, baseFileName))
+	for i := 1; i <= 2; i++ {
+		cmnd := exec.Command("pdflatex",
+			fmt.Sprintf("-output-directory=./%s", dirName),
+			"-synctex=1", "-no-shell-escape", "-interaction=nonstopmode",
+			fmt.Sprintf("./%s/%s", dirName, baseFileName))
 
-	var errb bytes.Buffer
-	cmnd.Stderr = &errb
+		var errb bytes.Buffer
+		cmnd.Stderr = &errb
 
-	err = cmnd.Run()
-	if err != nil {
-		log.Error().Msgf("%s; %s", err.Error(), errb.String())
-		return nil, err
+		err = cmnd.Run()
+		if err != nil {
+			log.Error().Msgf("%s; %s", err.Error(), errb.String())
+			return nil, err
+		}
+
+		log.Info().Msgf("Successfully ran pdflatex for the %dth time at %s.", i, dirName)
 	}
 
 	log.Info().Msgf("Successfully rendered pdf file at %s/%s.pdf", dirName, baseFileName)
@@ -214,7 +218,7 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-    subject := r.PostFormValue("subject")
+	subject := r.PostFormValue("subject")
 	recipient := r.PostFormValue("recipient")
 	recipientStreet := r.PostFormValue("recipient_street")
 	recipientPostalCode := r.PostFormValue("recipient_postal_code")
@@ -242,7 +246,7 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	}
 
 	l := LetterContent{
-        Subject:             subject,
+		Subject:             subject,
 		Recipient:           recipient,
 		RecipientStreet:     recipientStreet,
 		RecipientPostalCode: recipientPostalCode,
@@ -289,7 +293,7 @@ func main() {
 		),
 	)
 
-	apiVersionGauge.WithLabelValues("0.0.4", runtime.Version()).Set(1)
+	apiVersionGauge.WithLabelValues("0.0.5", runtime.Version()).Set(1)
 
 	http.Handle("/", rootChain)
 	http.Handle("/generate", generateChain)
