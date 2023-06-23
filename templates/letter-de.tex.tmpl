@@ -6,7 +6,6 @@
 	fromphone=false,
 	fromemail=false,
 	version=last,
-	foldmarks=off,
 	subject=beforeopening,
 	subject=centered,
 	foldmarks=true
@@ -33,8 +32,11 @@
 }
 \setkomavar{firstfoot}{\centering\pagemark}
 
-\setkomavar{fromname}{ {{ .Sender }} }
-\setkomavar{fromaddress}{ {{ .SenderStreet }}\\{{ .SenderPostalCode }} {{ .SenderCity }} }
+\setkomavar{fromname}{}
+\setkomavar{fromaddress}{}
+\setkomavar{backaddress}{ {{ .Sender }}\\ {{ .SenderStreet }}\\{{ .SenderPostalCode }} {{ .SenderCity }} }
+\setkomavar{backaddressseparator}{, }
+
 \setkomavar{date}{ {{ .Date }} }
 \setkomavar{subject}{ {{ .Subject }} }
 
