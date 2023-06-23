@@ -7,7 +7,7 @@ COPY letter-generator.go /app
 RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o letter-generator .
 
 FROM debian:bullseye
-RUN apt-get update && apt-get -y install texlive-full
+RUN apt-get update && apt-get -y install texlive texlive-lang-german texlive-fonts-extra
 
 WORKDIR /app
 COPY templates templates
