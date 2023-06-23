@@ -85,8 +85,8 @@ jobs:
           sha256sum: true
           md5sum: false
           overwrite: true
-  docker:
-    name: Release Docker Images
+  docker-arm64:
+    name: Release arm64 Docker Image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -97,7 +97,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
         with:
-          platforms: "amd64,arm64,arm"
+          platforms: "arm64"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Login to Docker Hub
@@ -110,4 +110,4 @@ jobs:
         with:
           push: true
           tags: mmianl/letter-generator:v${{ env.VERSION }}
-          platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v7,linux/arm/v6
+          platforms: linux/arm64
