@@ -156,12 +156,13 @@ func pdfLatex(l *LetterContent) ([]byte, error) {
 			"-synctex=1", "-no-shell-escape", "-interaction=nonstopmode",
 			fmt.Sprintf("./%s/%s", dirName, baseFileName))
 
-		var errb bytes.Buffer
+		var errb, erro bytes.Buffer
 		cmnd.Stderr = &errb
+		cmnd.Stdout = &erro
 
 		err = cmnd.Run()
 		if err != nil {
-			log.Error().Msgf("%s; %s", err.Error(), errb.String())
+			log.Error().Msgf("%s; %s; %s", err.Error(), errb.String(), erro.String())
 			return nil, err
 		}
 
