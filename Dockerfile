@@ -3,8 +3,8 @@ WORKDIR /app
 
 COPY go.mod /app
 COPY go.sum /app
-COPY generator.go /app
-RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o generator .
+COPY letter-generator.go /app
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o letter-generator .
 
 FROM debian:bullseye
 RUN apt-get update && apt-get -y install texlive-full
@@ -12,9 +12,9 @@ RUN apt-get update && apt-get -y install texlive-full
 WORKDIR /app
 COPY templates templates
 COPY web web
-COPY --from=builder /app/generator /app
+COPY --from=builder /app/letter-generator /app
 
 RUN chown -R 1000 /app
-CMD ["/app/generator"] 
+CMD ["/app/letter-generator"] 
 
 USER 1000
