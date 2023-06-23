@@ -100,7 +100,9 @@ func (l *LetterContent) Sanitize() {
 		"\\", " ",
 		"<", " ",
 		">", " ",
-		"_", " ")
+		"_", " ",
+		"\"", "“",
+		"'", "‘")
 
 	l.Recipient = truncate.Truncate(replacer.Replace(l.Recipient), 200, "...", truncate.PositionEnd)
 	l.RecipientStreet = truncate.Truncate(replacer.Replace(l.RecipientStreet), 200, "...", truncate.PositionEnd)
