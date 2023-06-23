@@ -1,0 +1,113 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-release:
+    name: Create Github Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create env file
+        run: |
+          VER=$(cat VERSION)
+          echo "VERSION=$VER" >> $GITHUB_ENV
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          automatic_release_tag: v${{ env.VERSION }}
+  release-binaries:
+    name: Release Go Binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: ["386", amd64, arm64]
+        exclude:
+          - goarch: "386"
+            goos: darwin
+          - goarch: arm64
+            goos: windows
+    needs: [create-release]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create env file
+        run: |
+          VER=$(cat VERSION)
+          echo "VERSION=$VER" >> $GITHUB_ENV
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          goversion: "https://dl.google.com/go/go1.20.3.linux-amd64.tar.gz"
+          binary_name: "letter-generator"
+          extra_files: LICENSE README.md
+          ldflags: -X main.Version=v${{ env.VERSION }}
+          release_tag: v${{ env.VERSION }}
+          sha256sum: true
+          md5sum: false
+          overwrite: true
+  release-binaries-armv7:
+    name: Release Arm Go Binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        goarm: ["6", "7"]
+    needs: [create-release]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create env file
+        run: |
+          VER=$(cat VERSION)
+          echo "VERSION=$VER" >> $GITHUB_ENV
+      - uses: wangyoucao577/go-release-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: linux
+          goarch: arm
+          goarm: ${{ matrix.goarm }}
+          goversion: "https://dl.google.com/go/go1.20.3.linux-amd64.tar.gz"
+          binary_name: "letter-generator"
+          extra_files: LICENSE README.md
+          ldflags: -X main.Version=v${{ env.VERSION }}
+          release_tag: v${{ env.VERSION }}
+          sha256sum: true
+          md5sum: false
+          overwrite: true
+  docker:
+    name: Release Docker Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create env file
+        run: |
+          VER=$(cat VERSION)
+          echo "VERSION=$VER" >> $GITHUB_ENV
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: "amd64,arm64,arm"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: mmianl/letter-generator:v${{ env.VERSION }}
+          platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v7,linux/arm/v6

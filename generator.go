@@ -19,6 +19,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var Version = "development"
 var (
 	apiRequestsInFlightGauge = promauto.NewGauge(
 		prometheus.GaugeOpts{
@@ -190,10 +191,17 @@ func GermanDate(t time.Time) string {
 func ReturnError(error string, w http.ResponseWriter) {
 	apiLettersGeneratedFailedCounter.WithLabelValues().Inc()
 
+	w.WriteHeader(http.StatusInternalServerError)
+	log.Error().Msgf(error)
+
 	t, err := template.ParseFiles("templates/error.html.tmpl")
 	if err != nil {
 		log.Error().Msg(err.Error())
-		error = fmt.Sprintf("%s\n%s", err, error)
+		error = fmt.Sprintf("%s\n%s", err.Error(), error)
+		if _, err := w.Write([]byte(error)); err != nil {
+			log.Panic().Msg(err.Error())
+		}
+		return
 	}
 
 	e := LetterError{
@@ -203,6 +211,10 @@ func ReturnError(error string, w http.ResponseWriter) {
 	err = t.Execute(w, e)
 	if err != nil {
 		log.Error().Msg(err.Error())
+		error = fmt.Sprintf("%s\n%s", err.Error(), error)
+		if _, err := w.Write([]byte(error)); err != nil {
+			log.Panic().Msg(err.Error())
+		}
 		return
 	}
 }
@@ -212,8 +224,6 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	err := r.ParseForm()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Error().Msgf(r.FormValue(err.Error()))
 		ReturnError(err.Error(), w)
 		return
 	}
@@ -239,8 +249,6 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	d, err := time.Parse("2006-01-02", date)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Error().Msgf(err.Error())
 		ReturnError(err.Error(), w)
 		return
 	}
@@ -265,14 +273,18 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	l.Sanitize()
 	fileBytes, err := pdfLatex(&l)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		ReturnError(err.Error(), w)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write(fileBytes)
+
+	_, err = w.Write(fileBytes)
+	if err != nil {
+		ReturnError(err.Error(), w)
+		return
+	}
 })
 
 func main() {
@@ -293,16 +305,22 @@ func main() {
 		),
 	)
 
-	apiVersionGauge.WithLabelValues("0.0.5", runtime.Version()).Set(1)
+	apiVersionGauge.WithLabelValues(Version, runtime.Version()).Set(1)
 
 	http.Handle("/", rootChain)
 	http.Handle("/generate", generateChain)
 
-	go http.ListenAndServe(":8081", promhttp.Handler())
+	log.Info().Msgf("Running letter-generator version %s", Version)
+	go func() {
+		err := http.ListenAndServe(":8081", promhttp.Handler())
+		if err != nil {
+			log.Fatal().Msgf(err.Error())
+		}
+	}()
 
 	log.Info().Msgf("Listening on :8080...")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		log.Error().Msgf(err.Error())
+		log.Fatal().Msgf(err.Error())
 	}
 }
