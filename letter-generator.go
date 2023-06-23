@@ -280,14 +280,16 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", "attachment; filename=letter.pdf")
 
 	_, err = w.Write(fileBytes)
 	if err != nil {
 		ReturnError(err.Error(), w)
 		return
 	}
+
+	w.WriteHeader(http.StatusOK)
 })
 
 func main() {

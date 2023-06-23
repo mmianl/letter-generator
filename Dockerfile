@@ -6,7 +6,7 @@ COPY go.sum /app
 COPY VERSION /app
 COPY letter-generator.go /app
 RUN export VERSION=$(cat VERSION) && \
-    CGO_ENABLED=${CGO_ENABLED} && \
+    CGO_ENABLED=0 && \
     go build -ldflags="-X 'main.Version=v${VERSION}'" -a -installsuffix cgo -o letter-generator .
 
 FROM debian:bullseye
