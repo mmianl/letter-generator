@@ -88,6 +88,49 @@ type LetterContent struct {
 	SignatureSpace      bool
 }
 
+// Address joins the populated parts of a postal address into LaTeX lines.
+// Keeping the separators here prevents an empty form field from producing a
+// leading or duplicate \\ line-break command in the generated document.
+func address(name, street, postalCode, city string) string {
+	lines := addressLines(name, street, postalCode, city)
+
+	return strings.Join(lines, `\\`)
+}
+
+func addressLines(name, street, postalCode, city string) []string {
+	lines := make([]string, 0, 3)
+	for _, line := range []string{name, street} {
+		if line = strings.TrimSpace(line); line != "" {
+			lines = append(lines, line)
+		}
+	}
+
+	location := strings.TrimSpace(strings.Join([]string{postalCode, city}, " "))
+	if location != "" {
+		lines = append(lines, location)
+	}
+
+	return lines
+}
+
+func (l *LetterContent) SenderAddress() string {
+	return address(l.Sender, l.SenderStreet, l.SenderPostalCode, l.SenderCity)
+}
+
+func (l *LetterContent) RecipientAddress() string {
+	return address(l.Recipient, l.RecipientStreet, l.RecipientPostalCode, l.RecipientCity)
+}
+
+// RecipientAddressHeightLines includes one extra line for the address window's
+// return address. It lets the template shrink the otherwise fixed DIN window.
+func (l *LetterContent) RecipientAddressHeightLines() int {
+	lineCount := len(addressLines(l.Recipient, l.RecipientStreet, l.RecipientPostalCode, l.RecipientCity))
+	if lineCount == 0 {
+		lineCount = 1
+	}
+	return lineCount + 1
+}
+
 type LetterError struct {
 	Error string
 }
@@ -285,11 +328,11 @@ var formHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 
 	_, err = w.Write(fileBytes)
 	if err != nil {
-		ReturnError(err.Error(), w)
+		// Write has already committed the response headers, so an HTML error
+		// response cannot be sent safely at this point.
+		log.Error().Msg(err.Error())
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
 })
 
 func main() {

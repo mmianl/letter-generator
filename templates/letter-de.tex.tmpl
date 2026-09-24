@@ -27,19 +27,25 @@
 \begin{document}
 
 \renewcommand*\pagemark{%
-  \usekomafont{pagenumber}{\thepage~/~\letterlastpage}
+  \ifnum\getpagerefnumber{\thisletter.lastpage}>1\relax
+    \usekomafont{pagenumber}{\thepage~/~\letterlastpage}%
+  \fi
 }
 \setkomavar{firstfoot}{\centering\pagemark}
 
 \setkomavar{fromname}{}
 \setkomavar{fromaddress}{}
-\setkomavar{backaddress}{ {{ .Sender }}\\ {{ .SenderStreet }}\\{{ .SenderPostalCode }} {{ .SenderCity }} }
+\setkomavar{backaddress}{ {{ .SenderAddress }} }
 \setkomavar{backaddressseparator}{, }
+% The DIN defaults reserve five address lines. Size this window to its content
+% so that omitted recipient fields do not leave an empty gap before the date.
+\setplength{toaddrheight}{\dimexpr5mm+{{ .RecipientAddressHeightLines }}\baselineskip\relax}
+\setplength{refvpos}{\dimexpr\useplength{toaddrvpos}+\useplength{toaddrheight}+\baselineskip\relax}
 
 \setkomavar{date}{ {{ .Date }} }
 \setkomavar{subject}{ {{ .Subject }} }
 
-\begin{letter}{ {{ .Recipient }}\\{{ .RecipientStreet }}\\{{ .RecipientPostalCode }} {{ .RecipientCity }} }
+\begin{letter}{ {{ .RecipientAddress }} }
 
 \opening{ {{ .Opening }} }
 

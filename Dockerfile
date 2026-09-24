@@ -9,8 +9,8 @@ RUN export VERSION=$(cat VERSION) && \
     CGO_ENABLED=0 && \
     go build -ldflags="-X 'main.Version=v${VERSION}'" -a -installsuffix cgo -o letter-generator .
 
-FROM debian:bullseye
-RUN apt-get update && apt-get -y install texlive texlive-lang-german
+FROM debian:latest
+RUN apt-get update && apt-get -y install --fix-missing texlive texlive-lang-german
 
 WORKDIR /app
 COPY templates templates
